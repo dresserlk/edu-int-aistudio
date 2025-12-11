@@ -1,329 +1,240 @@
-import { supabase } from './supabaseClient';
 import { 
   Student, Teacher, ClassSession, AttendanceRecord, PaymentRecord, SalaryRecord, UserProfile, Institute, UserRole
 } from '../types';
+import { MOCK_STUDENTS, MOCK_TEACHERS, MOCK_CLASSES, MOCK_ATTENDANCE, MOCK_PAYMENTS, MOCK_PROFILES, MOCK_INSTITUTES } from '../constants';
 
-// Helper to map DB snake_case to TS camelCase
-const mapProfile = (p: any): UserProfile => ({
-  id: p.id,
-  email: p.email,
-  name: p.name,
-  role: p.role as UserRole,
-  instituteId: p.institute_id,
-  avatarUrl: p.avatar_url
-});
+// --- SESSION STATE (Mocking Supabase Auth) ---
+let currentUser: UserProfile | null = null;
 
-const mapInstitute = (i: any): Institute => ({
-    id: i.id,
-    name: i.name,
-    status: i.status,
-    subscriptionPlan: i.subscription_plan,
-    createdAt: i.created_at
-});
-
-const mapStudent = (s: any): Student => ({
-    id: s.id,
-    instituteId: s.institute_id,
-    name: s.name,
-    email: s.email,
-    phone: s.phone,
-    enrolledDate: s.enrolled_date || s.created_at
-});
-
-const mapTeacher = (t: any): Teacher => ({
-    id: t.id,
-    instituteId: t.institute_id,
-    name: t.name,
-    email: t.email,
-    subjectSpecialty: t.subject_specialty,
-    baseSalary: t.base_salary,
-    commissionPerStudent: t.commission_per_student
-});
-
-const mapClass = (c: any): ClassSession => ({
-    id: c.id,
-    instituteId: c.institute_id,
-    name: c.name,
-    code: c.code,
-    gradeYear: c.grade_year,
-    teacherId: c.teacher_id,
-    schedule: c.schedule,
-    feePerMonth: c.fee_per_month,
-    studentIds: c.student_ids || []
-});
+// --- DATA STORE ---
+let institutes = [...MOCK_INSTITUTES];
+let profiles = [...MOCK_PROFILES];
+let students = [...MOCK_STUDENTS];
+let teachers = [...MOCK_TEACHERS];
+let classes = [...MOCK_CLASSES];
+let attendance = [...MOCK_ATTENDANCE];
+let payments = [...MOCK_PAYMENTS];
 
 export const DataService = {
   // --- Auth & Session ---
-  async login(email: string) {
-     // NOTE: We are using Password login. Make sure your Auth component sends password.
-     // For this architecture, we rely on Supabase handling the session.
-     // This method is mainly used to fetch the profile AFTER auth or check existing session.
-     const { data: { user } } = await supabase.auth.getUser();
-     if (!user) throw new Error("Not authenticated");
-     
-     const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-        
-     if (error || !profile) throw new Error("Profile not found");
-     
-     // Check Institute Status
-     if (profile.role !== UserRole.ADMIN && profile.institute_id) {
-         const { data: inst } = await supabase.from('institutes').select('status').eq('id', profile.institute_id).single();
-         if (inst?.status !== 'APPROVED') throw new Error("Institute is pending approval.");
-     }
-     
-     return mapProfile(profile);
-  },
-  
-  async logout() {
-    await supabase.auth.signOut();
-  },
-
-  async getCurrentUser(): Promise<UserProfile | null> {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return null;
-      
-      const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-      return data ? mapProfile(data) : null;
-  },
-
-  // --- Registration Flow ---
-  async registerInstitute(instituteName: string, managerName: string, email: string, password: string) {
-    // 1. Create Institute (Needs RLS policy allowing public insert, or use Edge Function)
-    const { data: instData, error: instError } = await supabase
-        .from('institutes')
-        .insert({ name: instituteName, status: 'PENDING' })
-        .select()
-        .single();
-        
-    if (instError) throw new Error("Failed to create institute: " + instError.message);
-
-    // 2. Sign Up User linked to this Institute
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-            data: {
-                full_name: managerName,
-                role: 'MANAGER',
-                institute_id: instData.id
+  login: (email: string) => {
+    const user = profiles.find(p => p.email === email);
+    if (user) {
+        currentUser = user;
+        // Check if institute is approved
+        if (user.role !== UserRole.ADMIN) {
+            const inst = institutes.find(i => i.id === user.instituteId);
+            if (inst?.status !== 'APPROVED') {
+                currentUser = null;
+                return Promise.reject("Institute is pending approval.");
             }
         }
-    });
-
-    if (authError) throw new Error("Failed to create user: " + authError.message);
-    return authData;
-  },
-
-  // --- Admin ---
-  async getAllInstitutes() {
-    const { data } = await supabase.from('institutes').select('*');
-    return (data || []).map(mapInstitute);
-  },
-
-  async approveInstitute(id: string) {
-    await supabase.from('institutes').update({ status: 'APPROVED' }).eq('id', id);
-  },
-
-  // --- Data Access ---
-  
-  async getStudents() {
-    const { data } = await supabase.from('students').select('*');
-    return (data || []).map(mapStudent);
-  },
-  
-  async addStudent(student: any) {
-    const user = await this.getCurrentUser();
-    if (!user?.instituteId) throw new Error("No institute");
-    
-    const { error } = await supabase.from('students').insert({
-        institute_id: user.instituteId,
-        name: student.name,
-        email: student.email,
-        phone: student.phone,
-        enrolled_date: student.enrolledDate
-    });
-    if (error) console.error(error);
-  },
-
-  async updateStudent(id: string, updates: any) {
-    await supabase.from('students').update({
-        name: updates.name,
-        email: updates.email,
-        phone: updates.phone
-    }).eq('id', id);
-  },
-
-  async getTeachers() {
-    const { data } = await supabase.from('teachers').select('*');
-    return (data || []).map(mapTeacher);
-  },
-
-  async addTeacher(teacher: any) {
-    const user = await this.getCurrentUser();
-    if (!user?.instituteId) throw new Error("No institute");
-
-    await supabase.from('teachers').insert({
-        institute_id: user.instituteId,
-        name: teacher.name,
-        email: teacher.email,
-        subject_specialty: teacher.subjectSpecialty,
-        base_salary: teacher.baseSalary,
-        commission_per_student: teacher.commissionPerStudent
-    });
-  },
-
-  async updateTeacher(id: string, updates: any) {
-    await supabase.from('teachers').update({
-        name: updates.name,
-        email: updates.email,
-        subject_specialty: updates.subjectSpecialty,
-        base_salary: updates.baseSalary
-    }).eq('id', id);
-  },
-
-  async getClasses() {
-    const { data } = await supabase.from('classes').select('*');
-    return (data || []).map(mapClass);
-  },
-
-  async addClass(cls: any) {
-    const user = await this.getCurrentUser();
-    if (!user?.instituteId) throw new Error("No institute");
-
-    await supabase.from('classes').insert({
-        institute_id: user.instituteId,
-        name: cls.name,
-        code: cls.code,
-        grade_year: cls.gradeYear,
-        teacher_id: cls.teacherId,
-        schedule: cls.schedule,
-        fee_per_month: cls.feePerMonth,
-        student_ids: []
-    });
-  },
-
-  async updateClass(id: string, updates: any) {
-    // Map camelCase updates back to snake_case if necessary
-    const payload: any = {};
-    if (updates.name) payload.name = updates.name;
-    if (updates.feePerMonth) payload.fee_per_month = updates.feePerMonth;
-    if (updates.teacherId) payload.teacher_id = updates.teacherId;
-    
-    await supabase.from('classes').update(payload).eq('id', id);
-  },
-
-  async enrollStudent(classId: string, studentId: string) {
-    // This is tricky with arrays in Postgres.
-    // simpler to fetch, append, update.
-    const { data: cls } = await supabase.from('classes').select('student_ids').eq('id', classId).single();
-    if (cls) {
-        const currentIds = cls.student_ids || [];
-        if (!currentIds.includes(studentId)) {
-            await supabase.from('classes').update({ student_ids: [...currentIds, studentId] }).eq('id', classId);
-        }
+        return Promise.resolve(user);
     }
+    return Promise.reject("Invalid credentials");
+  },
+  
+  logout: () => {
+    currentUser = null;
+    return Promise.resolve();
+  },
+
+  getCurrentUser: () => currentUser,
+
+  registerInstitute: (instituteName: string, managerName: string, email: string) => {
+    const newInstId = `inst-${Math.random().toString(36).substr(2, 5)}`;
+    const newInstitute: Institute = {
+        id: newInstId,
+        name: instituteName,
+        status: 'PENDING',
+        subscriptionPlan: 'FREE',
+        createdAt: new Date().toISOString()
+    };
+    
+    const newProfile: UserProfile = {
+        id: `mngr-${Math.random().toString(36).substr(2, 5)}`,
+        email,
+        name: managerName,
+        role: UserRole.MANAGER,
+        instituteId: newInstId
+    };
+
+    institutes.push(newInstitute);
+    profiles.push(newProfile);
+    return Promise.resolve();
+  },
+
+  // --- Institute Management (Admin Only) ---
+  getAllInstitutes: () => {
+    if (currentUser?.role !== UserRole.ADMIN) return Promise.resolve([]);
+    return Promise.resolve(institutes);
+  },
+
+  approveInstitute: (id: string) => {
+    if (currentUser?.role !== UserRole.ADMIN) return Promise.reject("Unauthorized");
+    institutes = institutes.map(i => i.id === id ? { ...i, status: 'APPROVED' } : i);
+    return Promise.resolve();
+  },
+
+  // --- Data Access Helpers (RLS Simulation) ---
+  // Ensure users only see data for their institute
+  
+  getStudents: () => {
+    if (!currentUser?.instituteId) return Promise.resolve([]);
+    return Promise.resolve(students.filter(s => s.instituteId === currentUser?.instituteId));
+  },
+  
+  addStudent: (student: Omit<Student, 'id' | 'instituteId'>) => {
+    if (!currentUser?.instituteId) return Promise.reject("No institute");
+    const newStudent = { 
+        ...student, 
+        id: Math.random().toString(36).substr(2, 9),
+        instituteId: currentUser.instituteId 
+    };
+    students = [...students, newStudent];
+    return Promise.resolve(newStudent);
+  },
+
+  updateStudent: (id: string, updates: Partial<Student>) => {
+    students = students.map(s => s.id === id ? { ...s, ...updates } : s);
+    return Promise.resolve();
+  },
+
+  getTeachers: () => {
+    if (!currentUser?.instituteId) return Promise.resolve([]);
+    return Promise.resolve(teachers.filter(t => t.instituteId === currentUser?.instituteId));
+  },
+
+  addTeacher: (teacher: Omit<Teacher, 'id' | 'instituteId'>) => {
+    if (!currentUser?.instituteId) return Promise.reject("No institute");
+    const newTeacher = { 
+        ...teacher, 
+        id: Math.random().toString(36).substr(2, 9),
+        instituteId: currentUser.instituteId
+    };
+    teachers = [...teachers, newTeacher];
+    // Also create a profile for them so they can login? 
+    // In real app, this would be separate invite flow.
+    return Promise.resolve(newTeacher);
+  },
+
+  updateTeacher: (id: string, updates: Partial<Teacher>) => {
+    teachers = teachers.map(t => t.id === id ? { ...t, ...updates } : t);
+    return Promise.resolve();
+  },
+
+  getClasses: () => {
+    if (!currentUser?.instituteId) return Promise.resolve([]);
+    let myClasses = classes.filter(c => c.instituteId === currentUser?.instituteId);
+    
+    // RLS: Teacher only sees their classes
+    if (currentUser.role === UserRole.TEACHER) {
+        // Find teacher profile ID (mock logic assuming currentUser.id matches teacher.id for simplicity in mock)
+        // In real app, auth.uid links to teachers table.
+        // For mock, we map manually in constants or use ID directly.
+        myClasses = myClasses.filter(c => c.teacherId === currentUser?.id);
+    }
+    return Promise.resolve(myClasses);
+  },
+
+  addClass: (cls: Omit<ClassSession, 'id' | 'instituteId'>) => {
+    if (!currentUser?.instituteId) return Promise.reject("No institute");
+    const newClass = { 
+        ...cls, 
+        id: Math.random().toString(36).substr(2, 9),
+        instituteId: currentUser.instituteId 
+    };
+    classes = [...classes, newClass];
+    return Promise.resolve(newClass);
+  },
+
+  updateClass: (id: string, updates: Partial<ClassSession>) => {
+    classes = classes.map(c => c.id === id ? { ...c, ...updates } : c);
+    return Promise.resolve();
+  },
+
+  enrollStudent: (classId: string, studentId: string) => {
+    classes = classes.map(c => {
+      if (c.id === classId && !c.studentIds.includes(studentId)) {
+        return { ...c, studentIds: [...c.studentIds, studentId] };
+      }
+      return c;
+    });
+    return Promise.resolve();
   },
 
   // --- Attendance ---
-  async getAllAttendance() {
-    const { data } = await supabase.from('attendance').select('*');
-    return (data || []).map(a => ({
-        id: a.id,
-        instituteId: a.institute_id,
-        classId: a.class_id,
-        studentId: a.student_id,
-        date: a.date,
-        status: a.status
-    }));
+  getAllAttendance: () => {
+    if (!currentUser?.instituteId) return Promise.resolve([]);
+    return Promise.resolve(attendance.filter(a => a.instituteId === currentUser?.instituteId));
   },
 
-  async markAttendance(records: AttendanceRecord[]) {
-    if (records.length === 0) return;
-    const user = await this.getCurrentUser();
-
-    // Transform to DB format
-    const dbRecords = records.map(r => ({
-        institute_id: user?.instituteId,
-        class_id: r.classId,
-        student_id: r.studentId,
-        date: r.date,
-        status: r.status
-    }));
-
-    // Upsert isn't directly supported nicely for batch with conflict on constraints unless configured.
-    // For simplicity, we delete existing for this date/class and insert new.
-    const classId = records[0].classId;
-    const date = records[0].date;
+  markAttendance: (records: AttendanceRecord[]) => {
+    if (!currentUser?.instituteId) return Promise.reject("No institute");
     
-    await supabase.from('attendance').delete().match({ class_id: classId, date: date });
-    await supabase.from('attendance').insert(dbRecords);
+    if (records.length === 0) return Promise.resolve();
+    
+    const { classId, date } = records[0];
+    
+    // Security check: Teacher can only mark their class
+    if (currentUser.role === UserRole.TEACHER) {
+        const cls = classes.find(c => c.id === classId);
+        if (!cls || cls.teacherId !== currentUser.id) {
+            return Promise.reject("Unauthorized: You can only mark attendance for your classes.");
+        }
+    }
+
+    // Clean existing
+    attendance = attendance.filter(a => !(a.classId === classId && a.date === date));
+    
+    // Inject instituteId
+    const secureRecords = records.map(r => ({ ...r, instituteId: currentUser!.instituteId! }));
+    attendance = [...attendance, ...secureRecords];
+    return Promise.resolve();
   },
 
   // --- Finance ---
-  async getPayments(month: string) {
-    const { data } = await supabase.from('payments').select('*').eq('month', month);
-    return (data || []).map(p => ({
-        id: p.id,
-        instituteId: p.institute_id,
-        studentId: p.student_id,
-        classId: p.class_id,
-        month: p.month,
-        amount: p.amount,
-        status: p.status,
-        datePaid: p.date_paid
-    }));
-  },
+  getPayments: (month: string) => Promise.resolve(payments.filter(p => p.month === month && p.instituteId === currentUser?.instituteId)),
   
-  async togglePaymentStatus(studentId: string, classId: string, month: string, amount: number) {
-    const user = await this.getCurrentUser();
-    // Check if exists
-    const { data: existing } = await supabase.from('payments')
-        .select('*')
-        .match({ student_id: studentId, class_id: classId, month: month })
-        .single();
+  togglePaymentStatus: (studentId: string, classId: string, month: string, amount: number) => {
+    if (!currentUser?.instituteId) return Promise.reject("No institute");
+    if (currentUser.role === UserRole.TEACHER) return Promise.reject("Teachers cannot manage fees.");
 
-    if (existing) {
-        const newStatus = existing.status === 'PAID' ? 'PENDING' : 'PAID';
-        await supabase.from('payments').update({
-            status: newStatus,
-            date_paid: newStatus === 'PAID' ? new Date().toISOString() : null
-        }).eq('id', existing.id);
-    } else {
-        await supabase.from('payments').insert({
-            institute_id: user?.instituteId,
-            student_id: studentId,
-            class_id: classId,
-            month,
-            amount,
-            status: 'PAID',
-            date_paid: new Date().toISOString()
-        });
-    }
-  },
-  
-  async calculateSalaries(month: string): Promise<SalaryRecord[]> {
-    // This logic is complex to do purely in SQL without a function.
-    // We fetch data and calculate in JS for now (client-side aggregation).
-    // In production, use a Postgres Function or Edge Function.
+    const existingIdx = payments.findIndex(p => p.studentId === studentId && p.classId === classId && p.month === month);
     
-    const teachers = await this.getTeachers();
-    const classes = await this.getClasses();
-    const user = await this.getCurrentUser();
+    if (existingIdx >= 0) {
+      const record = payments[existingIdx];
+      const newStatus = record.status === 'PAID' ? 'PENDING' : 'PAID';
+      payments[existingIdx] = { ...record, status: newStatus, datePaid: newStatus === 'PAID' ? new Date().toISOString().split('T')[0] : undefined };
+    } else {
+      payments.push({
+        id: Math.random().toString(36).substr(2, 9),
+        instituteId: currentUser.instituteId,
+        studentId,
+        classId,
+        month,
+        amount,
+        status: 'PAID',
+        datePaid: new Date().toISOString().split('T')[0]
+      });
+    }
+    return Promise.resolve();
+  },
+  
+  calculateSalaries: (month: string): Promise<SalaryRecord[]> => {
+    if (!currentUser?.instituteId) return Promise.resolve([]);
+    if (currentUser.role === UserRole.TEACHER) return Promise.resolve([]); // Teachers don't see all salaries
 
-    if (!user?.instituteId) return [];
-
-    return teachers.map(t => {
+    const myTeachers = teachers.filter(t => t.instituteId === currentUser?.instituteId);
+    
+    const salaryRecords: SalaryRecord[] = myTeachers.map(t => {
       const teacherClasses = classes.filter(c => c.teacherId === t.id);
       const totalStudents = teacherClasses.reduce((acc, curr) => acc + curr.studentIds.length, 0);
       const commissionAmount = totalStudents * t.commissionPerStudent;
       
       return {
         id: `sal-${t.id}-${month}`,
-        instituteId: user.instituteId!,
+        instituteId: currentUser!.instituteId!,
         teacherId: t.id,
         month,
         baseAmount: t.baseSalary,
@@ -332,17 +243,14 @@ export const DataService = {
         status: 'PENDING' 
       };
     });
+    return Promise.resolve(salaryRecords);
   },
 
-  async getFullDump() {
-    // Parallel fetch for Gemini
-    const [s, t, c, a, p] = await Promise.all([
-        this.getStudents(),
-        this.getTeachers(),
-        this.getClasses(),
-        this.getAllAttendance(),
-        this.getPayments(new Date().toISOString().slice(0, 7))
-    ]);
-    return { students: s, teachers: t, classes: c, attendance: a, payments: p };
-  }
+  getFullDump: () => ({
+    students: students.filter(s => s.instituteId === currentUser?.instituteId),
+    teachers: teachers.filter(t => t.instituteId === currentUser?.instituteId),
+    classes: classes.filter(c => c.instituteId === currentUser?.instituteId),
+    attendance: attendance.filter(a => a.instituteId === currentUser?.instituteId),
+    payments: payments.filter(p => p.instituteId === currentUser?.instituteId)
+  })
 };

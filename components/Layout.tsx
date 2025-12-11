@@ -1,7 +1,7 @@
 import React from 'react';
 import { LayoutDashboard, Users, GraduationCap, BookOpen, CalendarCheck, DollarSign, Menu, X, CloudLightning, Shield, LogOut } from 'lucide-react';
 import { DataService } from '../services/dataService';
-import { UserRole, UserProfile } from '../types';
+import { UserRole } from '../types';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -26,11 +26,7 @@ const NavItem = ({ icon: Icon, label, id, active, onClick }: any) => (
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, onLogout }) => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
-  const [user, setUser] = React.useState<UserProfile | null>(null);
-
-  React.useEffect(() => {
-    DataService.getCurrentUser().then(setUser);
-  }, []);
+  const user = DataService.getCurrentUser();
 
   const canSeeTeachers = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGER;
   const canSeeFinance = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGER;

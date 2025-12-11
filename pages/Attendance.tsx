@@ -45,7 +45,7 @@ export const Attendance = () => {
   const handleSave = async () => {
     if (!selectedClassId) return;
     
-    const user = await DataService.getCurrentUser();
+    const user = DataService.getCurrentUser();
     const records: AttendanceRecord[] = Object.entries(attendanceBuffer).map(([studentId, status]) => ({
       id: `${selectedClassId}-${selectedDate}-${studentId}`,
       classId: selectedClassId,

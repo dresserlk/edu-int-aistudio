@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { DataService } from '../services/dataService';
-import { supabase } from '../services/supabaseClient';
 import { GraduationCap, ArrowRight, Check } from 'lucide-react';
 
 interface AuthProps {
@@ -10,7 +9,7 @@ interface AuthProps {
 export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [mode, setMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState(''); // Mocking password
   
   // Registration fields
   const [instName, setInstName] = useState('');
@@ -18,43 +17,38 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      
-      // Check profile validity
       await DataService.login(email);
       onLogin();
     } catch (err: any) {
-      setError(err.message || 'Login failed');
-    } finally {
-        setLoading(false);
+      setError(typeof err === 'string' ? err : 'Login failed');
     }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!instName || !managerName || !email || !password) {
+    if (!instName || !managerName || !email) {
         setError("All fields required");
         return;
     }
-    setLoading(true);
     try {
-        await DataService.registerInstitute(instName, managerName, email, password);
-        setSuccess("Registration successful! Please check your email for verification.");
+        await DataService.registerInstitute(instName, managerName, email);
+        setSuccess("Registration successful! Please wait for Admin approval. (You can login as 'admin@platform.com' to approve yourself in this demo)");
         setMode('LOGIN');
-    } catch (err: any) {
-        setError(err.message || "Registration failed");
-    } finally {
-        setLoading(false);
+    } catch (err) {
+        setError("Registration failed");
     }
+  };
+
+  // Quick Mock Logins
+  const quickLogin = (email: string) => {
+      setEmail(email);
+      setPassword('password'); // dummy
   };
 
   return (
@@ -113,9 +107,18 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                             onChange={e => setPassword(e.target.value)}
                         />
                     </div>
-                    <button disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-50">
-                        {loading ? 'Processing...' : 'Sign In'} <ArrowRight className="w-4 h-4 ml-2" />
+                    <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors flex items-center justify-center">
+                        Sign In <ArrowRight className="w-4 h-4 ml-2" />
                     </button>
+
+                    <div className="mt-6 pt-6 border-t border-slate-100">
+                        <p className="text-xs text-slate-500 font-bold mb-2 uppercase">Quick Demo Login:</p>
+                        <div className="flex flex-wrap gap-2">
+                            <button type="button" onClick={() => quickLogin('admin@platform.com')} className="text-xs bg-slate-100 px-2 py-1 rounded hover:bg-slate-200">Admin</button>
+                            <button type="button" onClick={() => quickLogin('manager@springfield.com')} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded hover:bg-blue-100">Manager</button>
+                            <button type="button" onClick={() => quickLogin('sarah@eduflow.com')} className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded hover:bg-green-100">Teacher</button>
+                        </div>
+                    </div>
 
                     <div className="mt-4 text-center">
                         <span className="text-slate-600 text-sm">Don't have an account? </span>
@@ -160,13 +163,11 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                             type="password" 
                             className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                             placeholder="Create a password"
-                            value={password}
-                            onChange={e => setPassword(e.target.value)}
                         />
                     </div>
                     
-                    <button disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
-                        {loading ? 'Creating...' : 'Register Institute'}
+                    <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors">
+                        Register Institute
                     </button>
                     
                     <div className="mt-4 text-center">
