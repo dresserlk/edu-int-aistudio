@@ -1,0 +1,5 @@
+{
+  "name": "EduFlow Manager",
+  "description": "A comprehensive Educational Institute Management System. Features student/teacher management, class scheduling, attendance tracking, and automated financial calculations (fees & salaries). Includes AI-powered insights.",
+  "requestFramePermissions": []
+}
