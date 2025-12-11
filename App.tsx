@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { Auth } from './pages/Auth';
 import { Dashboard } from './pages/Dashboard';
@@ -15,11 +15,21 @@ import { UserRole } from './types';
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const user = DataService.getCurrentUser();
+  const [loading, setLoading] = useState(true);
+
+  // Check session on load
+  useEffect(() => {
+      DataService.fetchCurrentUser().then(user => {
+          if (user) {
+              setIsAuthenticated(true);
+              if (user.role === UserRole.ADMIN) setActiveTab('admin');
+          }
+          setLoading(false);
+      });
+  }, []);
 
   const handleLogin = () => {
     setIsAuthenticated(true);
-    // Reset tab based on role
     const currentUser = DataService.getCurrentUser();
     if (currentUser?.role === UserRole.ADMIN) {
         setActiveTab('admin');
@@ -34,6 +44,8 @@ function App() {
   };
 
   const renderContent = () => {
+    // We can rely on DataService.getCurrentUser() being populated now
+    const user = DataService.getCurrentUser();
     if (!user) return null;
 
     if (activeTab === 'admin' && user.role === UserRole.ADMIN) {
@@ -51,6 +63,8 @@ function App() {
       default: return <Dashboard />;
     }
   };
+
+  if (loading) return <div className="flex h-screen items-center justify-center bg-slate-50">Loading...</div>;
 
   if (!isAuthenticated) {
       return <Auth onLogin={handleLogin} />;

@@ -93,7 +93,7 @@ export const Students = () => {
     const { studentId, classId, month, amount } = feeConfirmation;
     await DataService.togglePaymentStatus(studentId, classId, month, amount);
     // Refresh payments
-    const allData = DataService.getFullDump();
+    const allData = await DataService.getFullDump();
     setPayments(allData.payments);
     setFeeConfirmation(null);
   };
