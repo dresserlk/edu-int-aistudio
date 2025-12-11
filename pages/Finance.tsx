@@ -34,7 +34,7 @@ export const Finance = () => {
         DataService.getClasses()
     ]);
     
-    const dump = DataService.getFullDump();
+    const dump = await DataService.getFullDump();
     
     setTeachers(t);
     setSalaries(sal);
