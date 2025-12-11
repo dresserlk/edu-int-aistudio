@@ -110,16 +110,16 @@ export const Finance = () => {
         <h2 className="text-2xl font-bold text-slate-900">Finance Management</h2>
       </div>
 
-      <div className="flex space-x-4 border-b border-slate-200">
+      <div className="flex space-x-4 border-b border-slate-200 overflow-x-auto">
         <button 
           onClick={() => setActiveTab('fees')}
-          className={`pb-2 px-4 font-medium text-sm ${activeTab === 'fees' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+          className={`pb-2 px-4 font-medium text-sm whitespace-nowrap ${activeTab === 'fees' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
         >
             Student Fees
         </button>
         <button 
           onClick={() => setActiveTab('salaries')}
-          className={`pb-2 px-4 font-medium text-sm ${activeTab === 'salaries' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+          className={`pb-2 px-4 font-medium text-sm whitespace-nowrap ${activeTab === 'salaries' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
         >
             Teacher Salaries
         </button>
@@ -127,17 +127,17 @@ export const Finance = () => {
 
       {activeTab === 'salaries' && (
         <div className="space-y-4">
-             <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200">
+             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-slate-200 gap-2">
                  <div className="text-sm text-slate-500">
                     Calculated for <span className="font-bold text-slate-900">{month}</span>
                  </div>
-                 <div className="flex items-center gap-2">
-                     <label className="text-sm font-bold text-slate-600">Select Month:</label>
+                 <div className="flex items-center gap-2 w-full sm:w-auto">
+                     <label className="text-sm font-bold text-slate-600 whitespace-nowrap">Select Month:</label>
                      <input 
                         type="month" 
                         value={month} 
                         onChange={(e) => setMonth(e.target.value)}
-                        className="border border-slate-300 bg-white p-2 rounded-lg text-sm"
+                        className="w-full sm:w-auto border border-slate-300 bg-white p-2 rounded-lg text-sm"
                      />
                  </div>
              </div>
@@ -146,6 +146,7 @@ export const Finance = () => {
                 <div className="p-4 bg-yellow-50 border-b border-yellow-100 text-sm text-yellow-800">
                     Note: Salary includes Base Pay + (Commission × Total Students in all classes assigned to teacher).
                 </div>
+                <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-200">
                     <thead className="bg-slate-50">
                     <tr>
@@ -191,6 +192,7 @@ export const Finance = () => {
                     })}
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
       )}
@@ -199,19 +201,19 @@ export const Finance = () => {
         <div className="space-y-4">
              {/* Fee Filters */}
              <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap gap-4 items-end">
-                <div>
+                <div className="w-full sm:w-auto">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Fee Month</label>
                     <input 
                         type="month"
                         value={feeFilterMonth}
                         onChange={(e) => setFeeFilterMonth(e.target.value)}
-                        className="border border-slate-300 bg-white text-slate-900 p-2 rounded-lg text-sm w-40 outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full sm:w-40 border border-slate-300 bg-white text-slate-900 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     />
                 </div>
-                <div>
+                <div className="w-full sm:w-auto">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Filter by Class</label>
                     <select 
-                        className="border border-slate-300 bg-white text-slate-900 p-2 rounded-lg text-sm w-48 outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full sm:w-48 border border-slate-300 bg-white text-slate-900 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
                         value={feeFilterClass}
                         onChange={e => setFeeFilterClass(e.target.value)}
                     >
@@ -219,10 +221,10 @@ export const Finance = () => {
                         {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                 </div>
-                <div>
+                <div className="w-full sm:w-auto">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Filter by Teacher</label>
                     <select 
-                        className="border border-slate-300 bg-white text-slate-900 p-2 rounded-lg text-sm w-48 outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full sm:w-48 border border-slate-300 bg-white text-slate-900 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
                         value={feeFilterTeacher}
                         onChange={e => setFeeFilterTeacher(e.target.value)}
                     >
@@ -230,10 +232,10 @@ export const Finance = () => {
                         {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
                 </div>
-                <div>
+                <div className="w-full sm:w-auto">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Sort By</label>
                     <select 
-                        className="border border-slate-300 bg-white text-slate-900 p-2 rounded-lg text-sm w-40 outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full sm:w-40 border border-slate-300 bg-white text-slate-900 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
                         value={feeSort}
                         onChange={e => setFeeSort(e.target.value)}
                     >
@@ -243,7 +245,7 @@ export const Finance = () => {
                     </select>
                 </div>
                 
-                <div className="ml-auto flex items-center gap-4 text-sm bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+                <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-4 text-sm bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 mt-2 sm:mt-0">
                     <div>
                         <span className="text-slate-500">Collected:</span> 
                         <span className="ml-1 font-bold text-green-600">${totalCollected}</span>
@@ -257,6 +259,7 @@ export const Finance = () => {
              </div>
 
              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-200">
                     <thead className="bg-slate-50">
                         <tr>
@@ -290,6 +293,7 @@ export const Finance = () => {
                         )}
                     </tbody>
                 </table>
+                </div>
              </div>
         </div>
       )}

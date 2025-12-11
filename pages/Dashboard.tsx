@@ -49,19 +49,19 @@ export const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Dashboard Overview</h1>
         <button 
           onClick={handleGetInsights}
           disabled={loadingAi}
-          className="flex items-center px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="flex items-center px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 w-full sm:w-auto justify-center"
         >
           <Sparkles className="w-4 h-4 mr-2" />
           {loadingAi ? 'Analyzing...' : 'Ask AI Advisor'}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title="Total Students" value={stats.students} icon={Users} color="bg-blue-500" />
         <StatCard title="Active Teachers" value={stats.teachers} icon={BookOpen} color="bg-emerald-500" />
         <StatCard title="Total Classes" value={stats.classes} icon={UserCheck} color="bg-violet-500" />
@@ -74,7 +74,7 @@ export const Dashboard = () => {
                 <Sparkles className="w-5 h-5 text-violet-500 mr-2" /> 
                 AI Executive Summary
             </h3>
-            <div className="prose prose-sm max-w-none text-slate-600">
+            <div className="prose prose-sm max-w-none text-slate-600 overflow-x-auto">
                 <pre className="whitespace-pre-wrap font-sans">{aiInsight}</pre>
             </div>
         </div>

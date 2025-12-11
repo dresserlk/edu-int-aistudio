@@ -157,11 +157,11 @@ export const Students = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-slate-900">Student Management</h2>
-        <div className="flex gap-2 w-full md:w-auto flex-wrap">
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           <div className="relative flex-1 md:w-64">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
             <input 
-              placeholder="Search (Name, ID, Course)..." 
+              placeholder="Search..." 
               className="w-full border border-slate-300 pl-9 p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-900 bg-white"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -169,7 +169,7 @@ export const Students = () => {
           </div>
           <div className="relative">
              <select 
-                className="border border-slate-300 p-2 rounded-lg bg-white text-slate-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full sm:w-auto border border-slate-300 p-2 rounded-lg bg-white text-slate-700 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                 value={sortOption}
                 onChange={e => setSortOption(e.target.value)}
              >
@@ -182,15 +182,16 @@ export const Students = () => {
                setStudentForm({ name: '', email: '', phone: '', enrolledDate: new Date().toISOString().split('T')[0] });
                setIsRegModalOpen(true);
             }}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm whitespace-nowrap"
+            className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm whitespace-nowrap"
           >
-            <UserPlus className="w-4 h-4 mr-2" /> New Student
+            <UserPlus className="w-4 h-4 mr-2" /> <span className="md:hidden lg:inline">New Student</span><span className="hidden md:inline lg:hidden">Add</span>
           </button>
         </div>
       </div>
 
       {/* Student List */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>
@@ -213,7 +214,7 @@ export const Students = () => {
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold mr-3 border border-blue-200">
+                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold mr-3 border border-blue-200 flex-shrink-0">
                           {student.name.charAt(0)}
                         </div>
                         <div>
@@ -356,6 +357,7 @@ export const Students = () => {
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Details Modal (Attendance or Fees) */}
@@ -376,6 +378,7 @@ export const Students = () => {
                         return (
                             <div className="space-y-4">
                                 <p className="text-sm text-slate-600">Attendance records for <strong>{cls?.name}</strong></p>
+                                <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-slate-200 border">
                                     <thead className="bg-slate-50">
                                         <tr>
@@ -400,6 +403,7 @@ export const Students = () => {
                                         ))}
                                     </tbody>
                                 </table>
+                                </div>
                                 {records.length === 0 && <p className="text-center text-slate-500 text-sm">No records found.</p>}
                             </div>
                         )
@@ -414,7 +418,7 @@ export const Students = () => {
                             <div className="space-y-4">
                                 <p className="text-sm text-slate-600">Fee history for <strong>{cls?.name}</strong> (Monthly Fee: ${cls?.feePerMonth})</p>
                                 
-                                <div className="border rounded-lg overflow-hidden">
+                                <div className="border rounded-lg overflow-hidden overflow-x-auto">
                                      <table className="min-w-full divide-y divide-slate-200">
                                         <thead className="bg-slate-50">
                                             <tr>

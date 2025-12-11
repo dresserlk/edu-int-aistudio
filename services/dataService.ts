@@ -109,7 +109,7 @@ export const DataService = {
     return Promise.resolve(); 
   },
 
-  // --- Institute Management (Admin Only) ---
+  // --- Institute Management (Admin Only & Manager View) ---
   async getAllInstitutes() {
     const { data } = await supabase.from('institutes').select('*');
     return (data || []).map(mapInstitute);
@@ -117,6 +117,18 @@ export const DataService = {
 
   async approveInstitute(id: string) {
     await supabase.from('institutes').update({ status: 'APPROVED' }).eq('id', id);
+  },
+
+  async getInstitute() {
+    if (!currentUserCache?.instituteId) return null;
+    const { data } = await supabase.from('institutes').select('*').eq('id', currentUserCache.instituteId).single();
+    return data ? mapInstitute(data) : null;
+  },
+
+  async updateInstitute(name: string) {
+    if (!currentUserCache?.instituteId) throw new Error("No institute");
+    const { error } = await supabase.from('institutes').update({ name }).eq('id', currentUserCache.instituteId);
+    if (error) throw new Error(error.message);
   },
 
   // --- Data Access ---
@@ -289,9 +301,6 @@ export const DataService = {
 
     if (!currentUserCache?.instituteId) return [];
 
-    // Fetch existing salary payments for this month to check status
-    // IMPORTANT: Users need to create 'teacher_salaries' table for this to work.
-    // If not exists, it will just default to PENDING
     const { data: paidSalaries } = await supabase.from('teacher_salaries')
         .select('*')
         .eq('month', month);
@@ -322,7 +331,6 @@ export const DataService = {
       if (!currentUserCache?.instituteId) throw new Error("No institute");
       const newStatus = currentStatus === 'PAID' ? 'PENDING' : 'PAID';
       
-      // Check if record exists
       const { data: existing } = await supabase.from('teacher_salaries')
           .select('*')
           .match({ teacher_id: teacherId, month: month })
@@ -334,8 +342,6 @@ export const DataService = {
               date_paid: newStatus === 'PAID' ? new Date().toISOString() : null
           }).eq('id', existing.id);
       } else {
-          // If the table doesn't exist, this will error. 
-          // We assume user ran the SQL from DeploymentGuide.
           await supabase.from('teacher_salaries').insert({
               institute_id: currentUserCache.instituteId,
               teacher_id: teacherId,
@@ -349,22 +355,18 @@ export const DataService = {
 
   // --- Dashboard Real Data ---
   async getDashboardData() {
-      // 1. Counts
       const [s, t, c] = await Promise.all([
           this.getStudents(),
           this.getTeachers(),
           this.getClasses()
       ]);
 
-      // 2. Revenue (Last 6 months)
-      // This is heavier, in a real app use a specific SQL function or view
       const { data: allPayments } = await supabase.from('payments').select('amount, month, status');
       
       const revenue = (allPayments || [])
           .filter(p => p.status === 'PAID')
           .reduce((acc, curr) => acc + curr.amount, 0);
 
-      // Revenue Trend Graph Data
       const months = [];
       for (let i = 5; i >= 0; i--) {
           const d = new Date();
@@ -379,7 +381,6 @@ export const DataService = {
           return { name: m, uv: monthlyTotal };
       });
 
-      // Pie Chart Data (Current Month Status)
       const currentMonth = new Date().toISOString().slice(0, 7);
       const currentPayments = (allPayments || []).filter(p => p.month === currentMonth);
       

@@ -89,9 +89,9 @@ export const Attendance = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold text-slate-900">Attendance Manager</h2>
-        <div className="flex bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
+        <div className="flex bg-white rounded-lg p-1 border border-slate-200 shadow-sm self-start">
             <button 
                 onClick={() => setActiveTab('mark')}
                 className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'mark' ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
@@ -110,7 +110,7 @@ export const Attendance = () => {
       {activeTab === 'mark' && (
         <>
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-wrap gap-4 items-end">
-                <div className="w-64">
+                <div className="w-full sm:w-64">
                 <label className="block text-sm font-bold text-slate-700 mb-1">Select Class</label>
                 <select 
                     className="w-full border border-slate-300 bg-white text-slate-900 p-2 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
@@ -125,7 +125,7 @@ export const Attendance = () => {
                 </select>
                 </div>
                 
-                <div className="w-48">
+                <div className="w-full sm:w-48">
                 <label className="block text-sm font-bold text-slate-700 mb-1">Date</label>
                 <input 
                     type="date" 
@@ -138,6 +138,7 @@ export const Attendance = () => {
 
             {selectedClassId && (
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-200">
                     <thead className="bg-slate-50">
                     <tr>
@@ -177,6 +178,7 @@ export const Attendance = () => {
                     )}
                     </tbody>
                 </table>
+                </div>
                 <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end items-center">
                     {message && <span className="text-green-600 mr-4 text-sm font-bold">{message}</span>}
                     <button 
@@ -194,10 +196,10 @@ export const Attendance = () => {
       {activeTab === 'view' && (
         <div className="space-y-4">
              <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap gap-4 items-end">
-                <div>
+                <div className="w-full sm:w-auto">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Filter by Teacher</label>
                     <select 
-                        className="border border-slate-300 bg-white text-slate-900 p-2 rounded-lg text-sm w-48 outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full sm:w-48 border border-slate-300 bg-white text-slate-900 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
                         value={filterTeacherId}
                         onChange={e => setFilterTeacherId(e.target.value)}
                     >
@@ -205,10 +207,10 @@ export const Attendance = () => {
                         {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
                 </div>
-                <div>
+                <div className="w-full sm:w-auto">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Filter by Class</label>
                     <select 
-                        className="border border-slate-300 bg-white text-slate-900 p-2 rounded-lg text-sm w-48 outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full sm:w-48 border border-slate-300 bg-white text-slate-900 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
                         value={filterClassId}
                         onChange={e => setFilterClassId(e.target.value)}
                     >
@@ -218,11 +220,11 @@ export const Attendance = () => {
                         ))}
                     </select>
                 </div>
-                <div>
+                <div className="w-full sm:w-auto">
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Filter by Date</label>
                     <input 
                         type="date"
-                        className="border border-slate-300 bg-white text-slate-900 p-2 rounded-lg text-sm w-40 outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full sm:w-40 border border-slate-300 bg-white text-slate-900 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
                         value={filterDate}
                         onChange={e => setFilterDate(e.target.value)}
                     />
@@ -230,6 +232,7 @@ export const Attendance = () => {
              </div>
 
              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-200">
                     <thead className="bg-slate-50">
                     <tr>
@@ -265,6 +268,7 @@ export const Attendance = () => {
                         )}
                     </tbody>
                 </table>
+                </div>
              </div>
         </div>
       )}

@@ -9,6 +9,7 @@ import { Students } from './pages/Students';
 import { Teachers } from './pages/Teachers';
 import { DeploymentGuide } from './pages/DeploymentGuide';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { InstituteProfile } from './pages/InstituteProfile';
 import { DataService } from './services/dataService';
 import { UserRole } from './types';
 
@@ -59,6 +60,7 @@ function App() {
       case 'classes': return <Classes />;
       case 'attendance': return <Attendance />;
       case 'finance': return <Finance />;
+      case 'institute': return <InstituteProfile />;
       case 'deploy': return <DeploymentGuide />;
       default: return <Dashboard />;
     }

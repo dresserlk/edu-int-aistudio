@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Users, GraduationCap, BookOpen, CalendarCheck, DollarSign, Menu, X, CloudLightning, Shield, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, GraduationCap, BookOpen, CalendarCheck, DollarSign, Menu, X, CloudLightning, Shield, LogOut, Settings } from 'lucide-react';
 import { DataService } from '../services/dataService';
 import { UserRole } from '../types';
 
@@ -30,8 +30,14 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
 
   const canSeeTeachers = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGER;
   const canSeeFinance = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGER;
-  const canSeeStudents = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGER; // Teachers see students inside their classes? or generally? Let's hide main student list for simplicity unless Manager
+  const canSeeStudents = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGER; 
   const isAdmin = user?.role === UserRole.ADMIN;
+  const hasInstitute = !!user?.instituteId;
+
+  const handleNavClick = (tab: string) => {
+    setActiveTab(tab);
+    setIsSidebarOpen(false); // Close sidebar on mobile on click
+  };
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
@@ -64,42 +70,46 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
           </button>
         </div>
 
-        <nav className="mt-6 flex flex-col space-y-1">
+        <nav className="mt-6 flex flex-col space-y-1 overflow-y-auto max-h-[calc(100vh-8rem)]">
           {isAdmin && (
-              <NavItem icon={Shield} label="Platform Admin" id="admin" active={activeTab === 'admin'} onClick={setActiveTab} />
+              <NavItem icon={Shield} label="Platform Admin" id="admin" active={activeTab === 'admin'} onClick={handleNavClick} />
           )}
 
-          {!isAdmin && <NavItem icon={LayoutDashboard} label="Dashboard" id="dashboard" active={activeTab === 'dashboard'} onClick={setActiveTab} />}
+          {!isAdmin && <NavItem icon={LayoutDashboard} label="Dashboard" id="dashboard" active={activeTab === 'dashboard'} onClick={handleNavClick} />}
           
           {(canSeeStudents || isAdmin) && (
-             <NavItem icon={Users} label="Students" id="students" active={activeTab === 'students'} onClick={setActiveTab} />
+             <NavItem icon={Users} label="Students" id="students" active={activeTab === 'students'} onClick={handleNavClick} />
           )}
           
           {canSeeTeachers && (
-            <NavItem icon={BookOpen} label="Teachers" id="teachers" active={activeTab === 'teachers'} onClick={setActiveTab} />
+            <NavItem icon={BookOpen} label="Teachers" id="teachers" active={activeTab === 'teachers'} onClick={handleNavClick} />
           )}
           
           {/* Everyone sees Classes/Attendance but data inside is filtered */}
-          {!isAdmin && <NavItem icon={CalendarCheck} label="Classes" id="classes" active={activeTab === 'classes'} onClick={setActiveTab} />}
-          {!isAdmin && <NavItem icon={CalendarCheck} label="Attendance" id="attendance" active={activeTab === 'attendance'} onClick={setActiveTab} />}
+          {!isAdmin && <NavItem icon={CalendarCheck} label="Classes" id="classes" active={activeTab === 'classes'} onClick={handleNavClick} />}
+          {!isAdmin && <NavItem icon={CalendarCheck} label="Attendance" id="attendance" active={activeTab === 'attendance'} onClick={handleNavClick} />}
           
           {canSeeFinance && (
-            <NavItem icon={DollarSign} label="Finance" id="finance" active={activeTab === 'finance'} onClick={setActiveTab} />
+            <NavItem icon={DollarSign} label="Finance" id="finance" active={activeTab === 'finance'} onClick={handleNavClick} />
+          )}
+
+          {hasInstitute && (
+             <NavItem icon={Settings} label="Institute Profile" id="institute" active={activeTab === 'institute'} onClick={handleNavClick} />
           )}
           
           <div className="pt-4 mt-4 border-t border-slate-800">
-             <NavItem icon={CloudLightning} label="Deployment Guide" id="deploy" active={activeTab === 'deploy'} onClick={setActiveTab} />
+             <NavItem icon={CloudLightning} label="Deployment Guide" id="deploy" active={activeTab === 'deploy'} onClick={handleNavClick} />
           </div>
         </nav>
 
-        <div className="absolute bottom-0 w-full p-6 bg-slate-950">
+        <div className="absolute bottom-0 w-full p-4 bg-slate-950">
           <div className="flex items-center justify-between">
-             <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center font-bold text-white border-2 border-slate-600">
+             <div className="flex items-center space-x-3 overflow-hidden">
+                <div className="w-10 h-10 rounded-full bg-slate-700 flex-shrink-0 flex items-center justify-center font-bold text-white border-2 border-slate-600">
                     {user?.name?.charAt(0) || 'U'}
                 </div>
-                <div>
-                <p className="text-sm font-semibold text-white max-w-[100px] truncate">{user?.name}</p>
+                <div className="truncate">
+                <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
                 <p className="text-xs text-slate-500 uppercase">{user?.role}</p>
                 </div>
             </div>
@@ -112,7 +122,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="flex items-center justify-between h-16 px-6 bg-white border-b border-slate-200 lg:hidden">
+        <header className="flex items-center justify-between h-16 px-4 bg-white border-b border-slate-200 lg:hidden">
           <button 
             onClick={() => setIsSidebarOpen(true)}
             className="text-slate-500 hover:text-slate-700"
@@ -124,7 +134,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-8">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-7xl mx-auto pb-10">
             {children}
           </div>
         </main>
