@@ -10,7 +10,7 @@ export const Finance = () => {
   const [classes, setClasses] = useState<ClassSession[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   
-  const [month, setMonth] = useState('2023-10');
+  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
   const [activeTab, setActiveTab] = useState<'fees' | 'salaries'>('fees');
 
   // Filter State
@@ -24,16 +24,15 @@ export const Finance = () => {
   }, [month]); // Reload salaries when global month changes
 
   const loadData = async () => {
-    const [t, sal, p, s, c] = await Promise.all([
+    const [t, sal, s, c] = await Promise.all([
         DataService.getTeachers(),
         DataService.calculateSalaries(month),
-        // For fees tab, we need ALL payments potentially, or we filter in memory
-        // Since getFullDump is available, let's use it for comprehensive data
-        Promise.resolve([]), 
         DataService.getStudents(),
         DataService.getClasses()
     ]);
     
+    // We can't always get full dump for fees in real-time efficiently without filters,
+    // but for now relying on the same pattern as before:
     const dump = await DataService.getFullDump();
     
     setTeachers(t);
@@ -43,10 +42,19 @@ export const Finance = () => {
     setClasses(c);
   };
 
+  const handleToggleSalary = async (salary: SalaryRecord) => {
+      try {
+          await DataService.toggleSalaryStatus(salary.teacherId, salary.month, salary.totalAmount, salary.status);
+          // Refresh
+          const updatedSalaries = await DataService.calculateSalaries(month);
+          setSalaries(updatedSalaries);
+      } catch (e) {
+          console.error(e);
+          alert("Failed to update salary. Ensure 'teacher_salaries' table exists in database (See Deployment Guide).");
+      }
+  };
+
   // --- Fee Filtering Logic ---
-  // We need to generate a "row" for every student in every class for the selected month
-  // even if a payment record doesn't exist yet (implied pending).
-  
   const generateFeeRows = () => {
     const rows: { 
         id: string, 
@@ -58,7 +66,6 @@ export const Finance = () => {
         month: string 
     }[] = [];
 
-    // Filter classes first
     const relevantClasses = classes.filter(c => {
         if (feeFilterClass && c.id !== feeFilterClass) return false;
         if (feeFilterTeacher && c.teacherId !== feeFilterTeacher) return false;
@@ -85,7 +92,6 @@ export const Finance = () => {
         });
     });
 
-    // Sorting
     return rows.sort((a, b) => {
         if (feeSort === 'student') return a.student.name.localeCompare(b.student.name);
         if (feeSort === 'class') return a.cls.name.localeCompare(b.cls.name);
@@ -121,14 +127,19 @@ export const Finance = () => {
 
       {activeTab === 'salaries' && (
         <div className="space-y-4">
-             <div className="flex justify-end items-center gap-2">
-                 <label className="text-sm font-bold text-slate-600">Salary Month:</label>
-                 <input 
-                    type="month" 
-                    value={month} 
-                    onChange={(e) => setMonth(e.target.value)}
-                    className="border border-slate-300 bg-white p-2 rounded-lg text-sm"
-                 />
+             <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200">
+                 <div className="text-sm text-slate-500">
+                    Calculated for <span className="font-bold text-slate-900">{month}</span>
+                 </div>
+                 <div className="flex items-center gap-2">
+                     <label className="text-sm font-bold text-slate-600">Select Month:</label>
+                     <input 
+                        type="month" 
+                        value={month} 
+                        onChange={(e) => setMonth(e.target.value)}
+                        className="border border-slate-300 bg-white p-2 rounded-lg text-sm"
+                     />
+                 </div>
              </div>
              
              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -143,11 +154,13 @@ export const Finance = () => {
                         <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Commission</th>
                         <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Total Payout</th>
                         <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Action</th>
                     </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-slate-200">
                     {salaries.map(salary => {
                         const teacher = teachers.find(t => t.id === salary.teacherId);
+                        const isPaid = salary.status === 'PAID';
                         return (
                         <tr key={salary.id}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
@@ -157,9 +170,21 @@ export const Finance = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${salary.commissionAmount}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">${salary.totalAmount}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
+                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${isPaid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                                     {salary.status}
                                 </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                <button
+                                    onClick={() => handleToggleSalary(salary)}
+                                    className={`px-3 py-1 rounded text-xs font-bold border transition-colors ${
+                                        isPaid 
+                                        ? 'border-slate-300 text-slate-500 hover:bg-slate-50' 
+                                        : 'bg-blue-600 text-white hover:bg-blue-700 border-transparent'
+                                    }`}
+                                >
+                                    {isPaid ? 'Mark Unpaid' : 'Mark Paid'}
+                                </button>
                             </td>
                         </tr>
                         );

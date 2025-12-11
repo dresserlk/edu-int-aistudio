@@ -86,67 +86,6 @@ export const Classes = () => {
     c.gradeYear.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const FormContent = () => (
-    <>
-        <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                 <label className="text-sm font-bold text-slate-700 mb-1 block">Course Name</label>
-                 <input 
-                  placeholder="e.g. Physics 101" 
-                  className="w-full border border-slate-300 bg-white text-slate-900 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
-                  value={classForm.name} onChange={e => setClassForm({...classForm, name: e.target.value})} 
-                />
-              </div>
-              <div>
-                <label className="text-sm font-bold text-slate-700 mb-1 block">Course Code</label>
-                <input 
-                  placeholder="e.g. PHY101" 
-                  className="w-full border border-slate-300 bg-white text-slate-900 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
-                  value={classForm.code} onChange={e => setClassForm({...classForm, code: e.target.value})} 
-                />
-              </div>
-              <div>
-                <label className="text-sm font-bold text-slate-700 mb-1 block">Grade/Year</label>
-                <input 
-                  placeholder="e.g. Year 1" 
-                  className="w-full border border-slate-300 bg-white text-slate-900 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
-                  value={classForm.gradeYear} onChange={e => setClassForm({...classForm, gradeYear: e.target.value})} 
-                />
-              </div>
-            </div>
-
-            <div className="mt-3">
-              <label className="text-sm font-bold text-slate-700 mb-1 block">Teacher</label>
-              <select 
-                className="w-full border border-slate-300 bg-white text-slate-900 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                value={classForm.teacherId} onChange={e => setClassForm({...classForm, teacherId: e.target.value})}
-              >
-                <option value="">Select Teacher</option>
-                {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mt-3">
-              <div>
-                <label className="text-sm font-bold text-slate-700 mb-1 block">Schedule</label>
-                <input 
-                  placeholder="e.g. Mon 10am" 
-                  className="w-full border border-slate-300 bg-white text-slate-900 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={classForm.schedule} onChange={e => setClassForm({...classForm, schedule: e.target.value})}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-bold text-slate-700 mb-1 block">Monthly Fee</label>
-                <input 
-                  type="number" placeholder="0" 
-                  className="w-full border border-slate-300 bg-white text-slate-900 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={classForm.feePerMonth || ''} onChange={e => setClassForm({...classForm, feePerMonth: Number(e.target.value)})}
-                />
-              </div>
-            </div>
-    </>
-  );
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -185,7 +124,65 @@ export const Classes = () => {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
             <h3 className="text-xl font-bold text-slate-900 mb-4">{isEditModalOpen ? 'Edit Class' : 'Create New Class'}</h3>
-            <FormContent />
+            
+            {/* Inline Form Content to prevent focus loss */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                 <label className="text-sm font-bold text-slate-700 mb-1 block">Course Name</label>
+                 <input 
+                  placeholder="e.g. Physics 101" 
+                  className="w-full border border-slate-300 bg-white text-slate-900 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
+                  value={classForm.name} onChange={e => setClassForm(prev => ({...prev, name: e.target.value}))} 
+                />
+              </div>
+              <div>
+                <label className="text-sm font-bold text-slate-700 mb-1 block">Course Code</label>
+                <input 
+                  placeholder="e.g. PHY101" 
+                  className="w-full border border-slate-300 bg-white text-slate-900 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
+                  value={classForm.code} onChange={e => setClassForm(prev => ({...prev, code: e.target.value}))} 
+                />
+              </div>
+              <div>
+                <label className="text-sm font-bold text-slate-700 mb-1 block">Grade/Year</label>
+                <input 
+                  placeholder="e.g. Year 1" 
+                  className="w-full border border-slate-300 bg-white text-slate-900 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
+                  value={classForm.gradeYear} onChange={e => setClassForm(prev => ({...prev, gradeYear: e.target.value}))} 
+                />
+              </div>
+            </div>
+
+            <div className="mt-3">
+              <label className="text-sm font-bold text-slate-700 mb-1 block">Teacher</label>
+              <select 
+                className="w-full border border-slate-300 bg-white text-slate-900 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                value={classForm.teacherId} onChange={e => setClassForm(prev => ({...prev, teacherId: e.target.value}))}
+              >
+                <option value="">Select Teacher</option>
+                {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mt-3">
+              <div>
+                <label className="text-sm font-bold text-slate-700 mb-1 block">Schedule</label>
+                <input 
+                  placeholder="e.g. Mon 10am" 
+                  className="w-full border border-slate-300 bg-white text-slate-900 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={classForm.schedule} onChange={e => setClassForm(prev => ({...prev, schedule: e.target.value}))}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-bold text-slate-700 mb-1 block">Monthly Fee</label>
+                <input 
+                  type="number" placeholder="0" 
+                  className="w-full border border-slate-300 bg-white text-slate-900 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={classForm.feePerMonth || ''} onChange={e => setClassForm(prev => ({...prev, feePerMonth: Number(e.target.value)}))}
+                />
+              </div>
+            </div>
+
             <div className="flex justify-end space-x-2 pt-4 border-t border-slate-100 mt-4">
               <button 
                 onClick={() => { setIsModalOpen(false); setIsEditModalOpen(false); }} 

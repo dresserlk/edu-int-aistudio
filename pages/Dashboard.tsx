@@ -18,39 +18,34 @@ const StatCard = ({ title, value, icon: Icon, color }: any) => (
 
 export const Dashboard = () => {
   const [stats, setStats] = useState({ students: 0, teachers: 0, classes: 0, revenue: 0 });
+  const [graphData, setGraphData] = useState<any[]>([]);
+  const [pieData, setPieData] = useState<any[]>([]);
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      DataService.getStudents(),
-      DataService.getTeachers(),
-      DataService.getClasses(),
-      DataService.getPayments('2023-10') // Mock current month
-    ]).then(([s, t, c, p]) => {
-      setStats({
-        students: s.length,
-        teachers: t.length,
-        classes: c.length,
-        revenue: p.reduce((acc, curr) => acc + curr.amount, 0)
-      });
-    });
+    loadDashboardData();
   }, []);
+
+  const loadDashboardData = async () => {
+      const data = await DataService.getDashboardData();
+      setStats(data.counts);
+      setGraphData(data.revenueTrend);
+      
+      // Filter out zero values for cleaner pie chart
+      const validPie = data.pieData.filter((d: any) => d.value > 0);
+      setPieData(validPie.length > 0 ? validPie : [{ name: 'No Data', value: 1 }]); 
+  };
 
   const handleGetInsights = async () => {
     setLoadingAi(true);
-    const data = DataService.getFullDump();
+    const data = await DataService.getFullDump();
     const insight = await GeminiService.getInsights(data);
     setAiInsight(insight);
     setLoadingAi(false);
   };
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
-  const pieData = [
-    { name: 'Paid', value: 400 },
-    { name: 'Pending', value: 300 },
-    { name: 'Overdue', value: 300 },
-  ];
+  const COLORS = ['#0088FE', '#FFBB28', '#FF8042', '#00C49F'];
 
   return (
     <div className="space-y-6">
@@ -70,7 +65,7 @@ export const Dashboard = () => {
         <StatCard title="Total Students" value={stats.students} icon={Users} color="bg-blue-500" />
         <StatCard title="Active Teachers" value={stats.teachers} icon={BookOpen} color="bg-emerald-500" />
         <StatCard title="Total Classes" value={stats.classes} icon={UserCheck} color="bg-violet-500" />
-        <StatCard title="Monthly Revenue" value={`$${stats.revenue}`} icon={DollarSign} color="bg-amber-500" />
+        <StatCard title="Total Revenue" value={`$${stats.revenue}`} icon={DollarSign} color="bg-amber-500" />
       </div>
 
       {aiInsight && (
@@ -87,23 +82,20 @@ export const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-80">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Revenue Trend (Mock)</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">Revenue Trend (Last 6 Months)</h3>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={[
-              { name: 'Jan', uv: 4000 }, { name: 'Feb', uv: 3000 }, { name: 'Mar', uv: 2000 },
-              { name: 'Apr', uv: 2780 }, { name: 'May', uv: 1890 }, { name: 'Jun', uv: 2390 },
-            ]}>
+            <BarChart data={graphData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="uv" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="uv" fill="#6366f1" radius={[4, 4, 0, 0]} name="Revenue ($)" />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-80">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Fee Collection Status</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">Fee Collection Status (Current Month)</h3>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie

@@ -67,7 +67,18 @@ create table students (
   -- ... other fields
 );
 
--- (Repeat adding institute_id for teachers, classes, attendance, payments)`}
+-- 3. Teacher Salaries (For status tracking)
+create table teacher_salaries (
+  id uuid primary key default uuid_generate_v4(),
+  institute_id uuid references institutes(id),
+  teacher_id uuid references teachers(id),
+  month text not null,
+  amount numeric,
+  status text default 'PAID',
+  date_paid date default CURRENT_DATE
+);
+-- ... repeat for other tables (classes, attendance, payments)
+`}
           </CodeBlock>
         </Step>
 
@@ -78,6 +89,7 @@ create table students (
 alter table institutes enable row level security;
 alter table profiles enable row level security;
 alter table students enable row level security;
+alter table teacher_salaries enable row level security;
 -- ... repeat for all tables
 
 -- POLICY 1: Managers can view EVERYTHING in their OWN institute
@@ -107,6 +119,18 @@ on institutes
 for all
 using (
   auth.uid() in (select id from profiles where role = 'ADMIN')
+);
+
+-- POLICY 4: Allow Managers to manage salaries
+create policy "Managers manage salaries"
+on teacher_salaries
+for all
+using (
+    institute_id in (
+    select institute_id from profiles 
+    where id = auth.uid() 
+    and role = 'MANAGER'
+  )
 );`}
           </CodeBlock>
         </Step>

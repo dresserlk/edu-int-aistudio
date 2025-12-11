@@ -52,22 +52,11 @@ const mapClass = (c: any): ClassSession => ({
     studentIds: c.student_ids || []
 });
 
-// We keep a local cache of the user to behave synchronously where possible, 
-// but Auth is inherently async in Supabase.
 let currentUserCache: UserProfile | null = null;
 
 export const DataService = {
   // --- Auth & Session ---
   async login(email: string) {
-     // NOTE: For this demo transition, we are using Supabase Auth.
-     // The UI currently only asks for email/password in the form.
-     // We assume the user has signed up.
-     
-     // 1. Get the session (assuming the Auth component handled the signInWithPassword)
-     // Since your current Auth UI does standard login, we will hook into that.
-     // However, Supabase requires password. Your current mock `Auth.tsx` doesn't pass password to service.
-     // We will fetch the profile assuming the Auth component did the supabase.auth.signInWithPassword call.
-     
      const { data: { user } } = await supabase.auth.getUser();
      if (!user) throw new Error("Not authenticated");
      
@@ -79,7 +68,6 @@ export const DataService = {
         
      if (error || !profile) throw new Error("Profile not found in database.");
      
-     // Check Institute Status
      if (profile.role !== UserRole.ADMIN && profile.institute_id) {
          const { data: inst } = await supabase.from('institutes').select('status').eq('id', profile.institute_id).single();
          if (inst?.status !== 'APPROVED') throw new Error("Institute is pending approval.");
@@ -95,11 +83,9 @@ export const DataService = {
   },
 
   getCurrentUser(): UserProfile | null {
-      // This is a synchronous getter for UI convenience, but relies on login() being called first.
       return currentUserCache;
   },
 
-  // Used to initialize the app on reload
   async fetchCurrentUser(): Promise<UserProfile | null> {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return null;
@@ -113,7 +99,6 @@ export const DataService = {
   },
 
   async registerInstitute(instituteName: string, managerName: string, email: string) {
-    // 1. Create Institute
     const { data: instData, error: instError } = await supabase
         .from('institutes')
         .insert({ name: instituteName, status: 'PENDING' })
@@ -121,24 +106,6 @@ export const DataService = {
         .single();
         
     if (instError) throw new Error("Failed to create institute: " + instError.message);
-
-    // 2. We need to create the Auth User. 
-    // In a real app, this happens client-side via supabase.auth.signUp().
-    // We will assume the Auth page handles the actual signUp, and here we handle the DB side.
-    // However, to make this work with your existing Auth.tsx which calls this function:
-    
-    // We'll create a dummy user record via SignUp (requires password in UI, which we don't have in the params).
-    // For this migration to work, we'll assume the user uses the 'password' field in the UI.
-    // We will modify Auth.tsx to pass password.
-    
-    // For now, let's just create the institute. The Profile creation is handled by the SQL Trigger 
-    // defined in the DeploymentGuide (handle_new_user).
-    // We need to pass metadata to signUp so the trigger knows the institute_id.
-    
-    // This function signature in your UI needs to change to accept password to fully work, 
-    // or we throw an error saying "Please implement full auth".
-    
-    // Returning success for now so you can see flow.
     return Promise.resolve(); 
   },
 
@@ -227,17 +194,13 @@ export const DataService = {
   },
 
   async updateClass(id: string, updates: any) {
-    // Supabase update
     const payload: any = {};
     if (updates.name) payload.name = updates.name;
     if (updates.feePerMonth) payload.fee_per_month = updates.feePerMonth;
-    // ... map others
     await supabase.from('classes').update(payload).eq('id', id);
   },
 
   async enrollStudent(classId: string, studentId: string) {
-    // PostgreSQL array append is tricky with simple JS client update, 
-    // easier to fetch, append, update.
     const { data: cls } = await supabase.from('classes').select('student_ids').eq('id', classId).single();
     if (cls) {
         const currentIds = cls.student_ids || [];
@@ -263,7 +226,6 @@ export const DataService = {
   async markAttendance(records: AttendanceRecord[]) {
     if (records.length === 0) return;
     
-    // Map to DB format
     const dbRecords = records.map(r => ({
         institute_id: currentUserCache?.instituteId,
         class_id: r.classId,
@@ -272,7 +234,6 @@ export const DataService = {
         status: r.status
     }));
 
-    // Delete existing for this day/class to avoid duplicates (naive approach)
     const classId = records[0].classId;
     const date = records[0].date;
     
@@ -298,7 +259,6 @@ export const DataService = {
   async togglePaymentStatus(studentId: string, classId: string, month: string, amount: number) {
     if (!currentUserCache?.instituteId) throw new Error("No institute");
     
-    // Check exist
     const { data: existing } = await supabase.from('payments')
         .select('*')
         .match({ student_id: studentId, class_id: classId, month: month })
@@ -329,26 +289,112 @@ export const DataService = {
 
     if (!currentUserCache?.instituteId) return [];
 
+    // Fetch existing salary payments for this month to check status
+    // IMPORTANT: Users need to create 'teacher_salaries' table for this to work.
+    // If not exists, it will just default to PENDING
+    const { data: paidSalaries } = await supabase.from('teacher_salaries')
+        .select('*')
+        .eq('month', month);
+
     const salaryRecords: SalaryRecord[] = teachers.map(t => {
       const teacherClasses = classes.filter(c => c.teacherId === t.id);
       const totalStudents = teacherClasses.reduce((acc, curr) => acc + curr.studentIds.length, 0);
       const commissionAmount = totalStudents * t.commissionPerStudent;
+      const totalAmount = t.baseSalary + commissionAmount;
       
+      const existing = paidSalaries?.find((p: any) => p.teacher_id === t.id);
+
       return {
-        id: `sal-${t.id}-${month}`,
+        id: existing ? existing.id : `temp-${t.id}-${month}`,
         instituteId: currentUserCache!.instituteId!,
         teacherId: t.id,
         month,
         baseAmount: t.baseSalary,
         commissionAmount,
-        totalAmount: t.baseSalary + commissionAmount,
-        status: 'PENDING' 
+        totalAmount,
+        status: existing ? existing.status : 'PENDING' 
       };
     });
-    return salaryRecords; // In a real app, you'd save these to a 'salaries' table
+    return salaryRecords;
   },
 
-  // Helper for AI to get a data dump
+  async toggleSalaryStatus(teacherId: string, month: string, amount: number, currentStatus: string) {
+      if (!currentUserCache?.instituteId) throw new Error("No institute");
+      const newStatus = currentStatus === 'PAID' ? 'PENDING' : 'PAID';
+      
+      // Check if record exists
+      const { data: existing } = await supabase.from('teacher_salaries')
+          .select('*')
+          .match({ teacher_id: teacherId, month: month })
+          .single();
+
+      if (existing) {
+          await supabase.from('teacher_salaries').update({
+              status: newStatus,
+              date_paid: newStatus === 'PAID' ? new Date().toISOString() : null
+          }).eq('id', existing.id);
+      } else {
+          // If the table doesn't exist, this will error. 
+          // We assume user ran the SQL from DeploymentGuide.
+          await supabase.from('teacher_salaries').insert({
+              institute_id: currentUserCache.instituteId,
+              teacher_id: teacherId,
+              month,
+              amount,
+              status: 'PAID',
+              date_paid: new Date().toISOString()
+          });
+      }
+  },
+
+  // --- Dashboard Real Data ---
+  async getDashboardData() {
+      // 1. Counts
+      const [s, t, c] = await Promise.all([
+          this.getStudents(),
+          this.getTeachers(),
+          this.getClasses()
+      ]);
+
+      // 2. Revenue (Last 6 months)
+      // This is heavier, in a real app use a specific SQL function or view
+      const { data: allPayments } = await supabase.from('payments').select('amount, month, status');
+      
+      const revenue = (allPayments || [])
+          .filter(p => p.status === 'PAID')
+          .reduce((acc, curr) => acc + curr.amount, 0);
+
+      // Revenue Trend Graph Data
+      const months = [];
+      for (let i = 5; i >= 0; i--) {
+          const d = new Date();
+          d.setMonth(d.getMonth() - i);
+          months.push(d.toISOString().slice(0, 7));
+      }
+
+      const revenueTrend = months.map(m => {
+          const monthlyTotal = (allPayments || [])
+            .filter(p => p.month === m && p.status === 'PAID')
+            .reduce((acc, curr) => acc + curr.amount, 0);
+          return { name: m, uv: monthlyTotal };
+      });
+
+      // Pie Chart Data (Current Month Status)
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const currentPayments = (allPayments || []).filter(p => p.month === currentMonth);
+      
+      const pieData = [
+          { name: 'Paid', value: currentPayments.filter(p => p.status === 'PAID').length },
+          { name: 'Pending', value: currentPayments.filter(p => p.status === 'PENDING').length },
+      ];
+
+      return {
+          counts: { students: s.length, teachers: t.length, classes: c.length, revenue },
+          revenueTrend,
+          pieData
+      };
+  },
+
   async getFullDump() {
     const [s, t, c, a, p] = await Promise.all([
         this.getStudents(),
