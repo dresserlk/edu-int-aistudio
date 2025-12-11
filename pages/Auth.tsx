@@ -166,7 +166,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                     </div>
                     
                     <button disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:opacity-50">
-                        {loading ? 'Creating...' : 'Register Institute'}
+                        {loading ? 'Creating...' : 'Register Institutew'}
                     </button>
                     
                     <div className="mt-4 text-center">
