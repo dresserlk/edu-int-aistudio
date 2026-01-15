@@ -96,12 +96,14 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
           {hasInstitute && (
              <NavItem icon={Settings} label="Institute Profile" id="institute" active={activeTab === 'institute'} onClick={handleNavClick} />
           )}
-          
+
+          {/*
           <div className="pt-4 mt-4 border-t border-slate-800">
              <NavItem icon={CloudLightning} label="Deployment Guide" id="deploy" active={activeTab === 'deploy'} onClick={handleNavClick} />
           </div>
         </nav>
-
+        */}
+        
         <div className="absolute bottom-0 w-full p-4 bg-slate-950">
           <div className="flex items-center justify-between">
              <div className="flex items-center space-x-3 overflow-hidden">
