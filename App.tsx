@@ -7,7 +7,7 @@ import { Attendance } from './pages/Attendance';
 import { Finance } from './pages/Finance';
 import { Students } from './pages/Students';
 import { Teachers } from './pages/Teachers';
-import { DeploymentGuide } from './pages/DeploymentGuide';
+import { DeploymentGuide } from '';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { InstituteProfile } from './pages/InstituteProfile';
 import { DataService } from './services/dataService';
